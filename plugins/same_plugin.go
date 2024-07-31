@@ -35,7 +35,7 @@ func (p *SamePlugin) Init() {
 func (p *SamePlugin) refreshImages() string {
 
 	// 获取当前images目录下的所有图片的路径并保存到image_arr中
-	imageDir := "images"
+	imageDir := "cache/images"
 	if err := os.MkdirAll(imageDir, os.ModePerm); err != nil {
 		slog.Error("Failed to create directory", "error", err)
 		return ""
@@ -144,7 +144,8 @@ func (p *SamePlugin) textToImage(prompt string) string {
 		return ""
 	}
 	// 通过prompt的hash值生成图片文件名
-	imagePath := filepath.Join("images", fmt.Sprintf("%x.png", md5.Sum([]byte(prompt))))
+	imageDir := "cache/images"
+	imagePath := filepath.Join(imageDir, fmt.Sprintf("%x.png", md5.Sum([]byte(prompt))))
 	if err := ioutil.WriteFile(imagePath, imageData, 0644); err != nil {
 		slog.Error("Failed to write image file", "error", err)
 		return ""
@@ -176,8 +177,8 @@ var handlers = map[string]CommandHandler{
 	"#same_setu":   handleSameSetu,
 	"#txt2img":     handleTxt2Img,
 	"#check_model": handleCheckModel,
-	"#model":       handleModel,
 	"#model_list":  handleModelList,
+	"#model":       handleModel,
 }
 
 func (p *SamePlugin) Handle(ctx *hub.Context) error {
