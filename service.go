@@ -12,19 +12,27 @@ type httpResult[T any] struct {
 }
 
 type Service struct {
-	sender *Sender
+	sender     *Sender
+	plugin_arr []*hub.Plugin
 }
 
 func NewService(sender *Sender) *Service {
 	return &Service{
-		sender: sender,
+		sender:     sender,
+		plugin_arr: []*hub.Plugin{},
 	}
+}
+
+func (s *Service) AddPlugin(plugin *hub.Plugin) {
+	s.plugin_arr = append(s.plugin_arr, plugin)
 }
 
 func (s *Service) Handle(message *hub.Message) error {
 	slog.Info("receive message", "type", message.MsgType, "content", message.Content)
-	if "#ping3" == message.Content {
-		return s.sender.SendText(message.GID, "pong")
+	for _, plugin := range s.plugin_arr {
+		if err := (*plugin).Handle(message, s.sender); err != nil {
+			return err
+		}
 	}
 	return nil
 }
