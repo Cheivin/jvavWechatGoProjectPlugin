@@ -25,6 +25,7 @@ func init() {
 	username = os.Getenv("WS_USERNAME")
 	password = os.Getenv("WS_PASSWORD")
 	apiHost = os.Getenv("API_HOST")
+
 	if server == "" {
 		panic("WS_SERVER is empty")
 	}

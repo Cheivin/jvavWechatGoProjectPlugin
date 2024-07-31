@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"wechat-hub-plugin/hub"
 )
 
@@ -32,8 +33,13 @@ func (p *SamePlugin) Init() {
 }
 
 func (p *SamePlugin) refreshImages() string {
+
 	// 获取当前images目录下的所有图片的路径并保存到image_arr中
 	imageDir := "images"
+	if err := os.MkdirAll(imageDir, os.ModePerm); err != nil {
+		slog.Error("Failed to create directory", "error", err)
+		return ""
+	}
 	files, err := os.ReadDir(imageDir)
 	if err != nil {
 		slog.Error("Failed to read images directory", "error", err)
@@ -163,73 +169,91 @@ func model_list() []string {
 	return models
 }
 
+type CommandHandler func(ctx *hub.Context, p *SamePlugin) error
+
+var handlers = map[string]CommandHandler{
+	"#same":        handleSame,
+	"#same_setu":   handleSameSetu,
+	"#txt2img":     handleTxt2Img,
+	"#check_model": handleCheckModel,
+	"#model":       handleModel,
+	"#model_list":  handleModelList,
+}
+
 func (p *SamePlugin) Handle(ctx *hub.Context) error {
-	slog.Info("SamePlugin receive message", "type", ctx.MsgType, "content", ctx.Content, "username", ctx.Username, "gid", ctx.GID, "uid", ctx.UID)
-	defer ctx.Abort()
-	// 如果用户不是same day，则返回
 	if "same day" != ctx.Username || ctx.UID != "f1ed61fbef4e6a63" {
 		slog.Error("Unauthorized user", "username", ctx.Username, "uid", ctx.UID)
 		return nil
 	}
 	p.refreshImages()
 	slog.Info("SamePlugin receive message", "type", ctx.MsgType, "content", ctx.Content)
-	if "#same" == ctx.Content {
-		return ctx.Sender.SendText(ctx.GID, "hello same")
-	}
-	if "#same_setu" == ctx.Content {
-		// 打开图片并获取io.reader对象
-		file_path := p.randomImage()
-		slog.Info("handle same_setu", "file_path", file_path)
-		file, err := os.Open(file_path)
-		if err != nil {
-			slog.Error("Failed to open image", "error", err)
-			return nil
+
+	for cmd, handler := range handlers {
+		if strings.HasPrefix(ctx.Content, cmd) {
+			return handler(ctx, p)
 		}
-
-		return ctx.Sender.SendImg(ctx.GID, file_path, file)
 	}
 
-	current_env := os.Getenv("PLUGIN_ENV")
-	if "same" != current_env {
-		slog.Info("current env is not same, textToImage will not be called")
+	// currentEnv := os.Getenv("PLUGIN_ENV")
+	// if "same" != currentEnv {
+	// 	slog.Info("current env is not same, textToImage will not be called")
+	// 	return nil
+	// }
+
+	return nil
+}
+
+func handleSame(ctx *hub.Context, p *SamePlugin) error {
+	return ctx.Sender.SendText(ctx.GID, "hello same")
+}
+
+func handleSameSetu(ctx *hub.Context, p *SamePlugin) error {
+	filePath := p.randomImage()
+	slog.Info("handle same_setu", "file_path", filePath)
+	file, err := os.Open(filePath)
+	if err != nil {
+		slog.Error("Failed to open image", "error", err)
 		return nil
 	}
-	// 如果包含#txt2img，则调用textToImage函数生成图片,prompt为#txt2img后面的内容
-	if len(ctx.Content) > 8 && ctx.Content[:8] == "#txt2img" {
-		prompt := ctx.Content[8:]
-		slog.Info("handle txt2img", "prompt", prompt)
-		ctx.Sender.SendText(ctx.GID, "正在生成图片，请稍等")
-		imagePath := p.textToImage(prompt)
-		if imagePath == "" {
-			slog.Error("Failed to generate image")
-			return ctx.Sender.SendText(ctx.GID, "Failed to generate image")
-		}
-		slog.Info("handle txt2img", "imagePath", imagePath)
-		file, err := os.Open(imagePath)
-		if err != nil {
-			slog.Error("Failed to open image", "error", err)
-			return nil
-		}
-		return ctx.Sender.SendImg(ctx.GID, imagePath, file)
+	return ctx.Sender.SendImg(ctx.GID, filePath, file)
+}
+
+func handleTxt2Img(ctx *hub.Context, p *SamePlugin) error {
+	prompt := ctx.Content[8:]
+	slog.Info("handle txt2img", "prompt", prompt)
+	ctx.Sender.SendText(ctx.GID, "正在生成图片，请稍等")
+	imagePath := p.textToImage(prompt)
+	if imagePath == "" {
+		slog.Error("Failed to generate image")
+		return ctx.Sender.SendText(ctx.GID, "Failed to generate image")
 	}
-	if len(ctx.Content) > 13 && ctx.Content[:12] == "#check_model" {
-		name := ctx.Content[13:]
-		slog.Info("handle check_model", "name", name)
-		if err := p.checkoutModel(name); err != nil {
-			return ctx.Sender.SendText(ctx.GID, "Failed to check out model")
-		}
-		return ctx.Sender.SendText(ctx.GID, "Model checked out successfully")
+	slog.Info("handle txt2img", "imagePath", imagePath)
+	file, err := os.Open(imagePath)
+	if err != nil {
+		slog.Error("Failed to open image", "error", err)
+		return nil
 	}
-	if "#model" == ctx.Content {
-		return ctx.Sender.SendText(ctx.GID, "当前模型："+p.Model)
+	return ctx.Sender.SendImg(ctx.GID, imagePath, file)
+}
+
+func handleCheckModel(ctx *hub.Context, p *SamePlugin) error {
+	name := ctx.Content[13:]
+	slog.Info("handle check_model", "name", name)
+	if err := p.checkoutModel(name); err != nil {
+		return ctx.Sender.SendText(ctx.GID, "Failed to check out model")
 	}
-	if "#model_list" == ctx.Content {
-		models := model_list()
-		models_str := "模型列表：\n"
-		for _, model := range models {
-			models_str += model + "\n"
-		}
-		return ctx.Sender.SendText(ctx.GID, models_str)
+	return ctx.Sender.SendText(ctx.GID, "Model checked out successfully")
+}
+
+func handleModel(ctx *hub.Context, p *SamePlugin) error {
+	return ctx.Sender.SendText(ctx.GID, "当前模型："+p.Model)
+}
+
+func handleModelList(ctx *hub.Context, p *SamePlugin) error {
+	models := model_list()
+	modelsStr := "模型列表：\n"
+	for _, model := range models {
+		modelsStr += model + "\n"
 	}
-	return nil
+	return ctx.Sender.SendText(ctx.GID, modelsStr)
 }
