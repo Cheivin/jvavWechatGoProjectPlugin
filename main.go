@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"time"
 	"wechat-hub-plugin/hub"
+	"wechat-hub-plugin/plugins"
 	"wechat-hub-plugin/redirect"
 )
 
@@ -38,6 +39,10 @@ func init() {
 	}
 }
 
+func initPlugins(service *Service) {
+	service.AddPlugin(&plugins.SamePlugin{})
+}
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	client := redirect.NewWebsocketClientMessageHandler(ctx, server, redirect.WSClientHeartbeat(30*time.Second))
@@ -56,6 +61,7 @@ func main() {
 	})
 
 	service := NewService(sender)
+	initPlugins(service)
 	client.OnMessage(func(bs []byte) error {
 		message := &hub.Message{}
 		if err := json.Unmarshal(bs, message); err != nil {
