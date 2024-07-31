@@ -40,7 +40,7 @@ func init() {
 }
 
 func initPlugins(service *Service) {
-	service.AddPlugin(&plugins.SamePlugin{})
+	service.AddPlugin(&plugins.SamePlugin{Model: "realisticVisionV13_v13"})
 }
 
 func main() {
