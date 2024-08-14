@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 	"wechat-hub-plugin/hub"
 	"wechat-hub-plugin/plugins"
@@ -73,6 +76,24 @@ func main() {
 		return service.Handle(message)
 	})
 
+	go healthEndpoint()
 	<-ctx.Done()
 	defer cancel()
+}
+
+func healthEndpoint() {
+	port, err := strconv.Atoi(os.Getenv("PORT"))
+	if err != nil {
+		port = 10000
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+		_, _ = w.Write([]byte{})
+	})
+
+	slog.Info("HealthEndpoint listening on", "port", port)
+	if err := http.ListenAndServe(":"+strconv.Itoa(port), mux); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("HealthEndpoint ListenAndServe", "err", err)
+	}
 }
