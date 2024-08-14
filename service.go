@@ -12,11 +12,11 @@ type httpResult[T any] struct {
 }
 
 type Service struct {
-	sender  *Sender
+	sender  hub.SenderInterface
 	plugins []hub.Plugin
 }
 
-func NewService(sender *Sender) *Service {
+func NewService(sender hub.SenderInterface) *Service {
 	return &Service{
 		sender:  sender,
 		plugins: []hub.Plugin{},

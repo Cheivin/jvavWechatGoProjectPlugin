@@ -20,7 +20,7 @@ type Sender struct {
 	client   *http.Client
 }
 
-func NewSender(apiHost string, username string, password string, sendFn func(msg hub.SendMsgCommand) error) *Sender {
+func NewSender(apiHost string, username string, password string, sendFn func(msg hub.SendMsgCommand) error) hub.SenderInterface {
 	return &Sender{
 		apiHost:  apiHost,
 		username: username,
