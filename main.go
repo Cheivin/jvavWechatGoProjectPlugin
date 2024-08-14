@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/spf13/viper"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -24,10 +25,26 @@ var (
 )
 
 func init() {
-	server = os.Getenv("WS_SERVER")
-	username = os.Getenv("WS_USERNAME")
-	password = os.Getenv("WS_PASSWORD")
-	apiHost = os.Getenv("API_HOST")
+	viper.SetConfigName(".env")
+	viper.SetConfigType("env")
+	viper.AddConfigPath(".")
+
+	viper.SetDefault("PORT", 10000)
+
+	if err := viper.ReadInConfig(); err != nil {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
+			slog.Error("Config file not found", "err", err)
+		} else {
+			panic(err)
+		}
+	}
+	viper.AutomaticEnv()
+
+	server = viper.GetString("WS_SERVER")
+	username = viper.GetString("WS_USERNAME")
+	password = viper.GetString("WS_PASSWORD")
+	apiHost = viper.GetString("API_HOST")
 
 	if server == "" {
 		panic("WS_SERVER is empty")
@@ -82,10 +99,7 @@ func main() {
 }
 
 func healthEndpoint() {
-	port, err := strconv.Atoi(os.Getenv("PORT"))
-	if err != nil {
-		port = 10000
-	}
+	port := viper.GetInt("PORT")
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)

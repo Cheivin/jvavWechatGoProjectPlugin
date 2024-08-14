@@ -1,4 +1,1 @@
-cache/
-.idea/
-*.ps1
-images/
+.env
