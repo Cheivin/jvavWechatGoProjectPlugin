@@ -83,7 +83,9 @@ func main() {
 		return client.SendMessage(data)
 	})
 
-	service := NewService(sender)
+	pointManage := NewPointManage(viper.GetString("API_HOST_POINT"), username, password)
+
+	service := NewService(sender, pointManage)
 	initPlugins(service)
 	client.OnMessage(func(bs []byte) error {
 		message := &hub.Message{}

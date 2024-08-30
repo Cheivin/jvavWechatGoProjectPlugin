@@ -24,7 +24,7 @@ func (h Plugin) match(rawContent string) (content string, matched bool) {
 		"write",
 	}
 	for _, keyword := range keywords {
-		if strings.HasPrefix(rawContent, keyword+" ") {
+		if strings.HasPrefix(rawContent, "#"+keyword+" ") {
 			matched = true
 			content = strings.TrimPrefix(rawContent, keyword)
 			return

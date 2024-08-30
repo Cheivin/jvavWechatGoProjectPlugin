@@ -17,7 +17,7 @@ func (p Plugin) match(rawContent string) (content string, matched bool) {
 		"nga",
 	}
 	for _, keyword := range keywords {
-		if strings.HasPrefix(rawContent, keyword) {
+		if strings.HasPrefix(rawContent, "#"+keyword) {
 			matched = true
 			content = strings.TrimPrefix(rawContent, keyword)
 			return
@@ -34,7 +34,7 @@ func (p Plugin) Handle(ctx *hub.Context) error {
 		return nil
 	}
 	img, err := p.getImage()
-	if err != nil {
+	if err != nil || img == nil {
 		slog.Error("[NGA]获取图片失败", "error", err)
 		ctx.Abort()
 		return nil
@@ -47,6 +47,11 @@ func (p Plugin) Handle(ctx *hub.Context) error {
 		slog.Error("[NGA]获取图片信息失败", "error", err)
 		ctx.Abort()
 		return nil
+	}
+	if _, err := ctx.UsePoint(ctx.Message.GID, ctx.Message.UID, 10, "nga"); err != nil {
+		_ = ctx.ReplayText("[NGA]" + err.Error())
+		ctx.Abort()
+		return err
 	}
 	if err := ctx.ReplayImg(info.Name(), img); err != nil {
 		slog.Error("[NGA]上传图片失败", "error", err)

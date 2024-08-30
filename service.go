@@ -12,14 +12,16 @@ type httpResult[T any] struct {
 }
 
 type Service struct {
-	sender  hub.SenderInterface
-	plugins []hub.Plugin
+	sender      hub.SenderInterface
+	pointManage hub.PointInterface
+	plugins     []hub.Plugin
 }
 
-func NewService(sender hub.SenderInterface) *Service {
+func NewService(sender hub.SenderInterface, pointManage hub.PointInterface) *Service {
 	return &Service{
-		sender:  sender,
-		plugins: []hub.Plugin{},
+		sender:      sender,
+		pointManage: pointManage,
+		plugins:     []hub.Plugin{},
 	}
 }
 
@@ -32,6 +34,7 @@ func (s *Service) Handle(message *hub.Message) error {
 	ctx := &hub.Context{
 		Message: message,
 		Sender:  s.sender,
+		Point:   s.pointManage,
 	}
 	for _, plugin := range s.plugins {
 		if err := (plugin).Handle(ctx); err != nil {

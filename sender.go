@@ -82,7 +82,7 @@ func (s *Sender) upload(filename string, file io.Reader) (string, error) {
 		return "", err
 	}
 
-	req, err := http.NewRequest("POST", apiHost+"/upload", body)
+	req, err := http.NewRequest("POST", s.apiHost+"/upload", body)
 	if err != nil {
 		slog.Error("Failed to create request", "error", err)
 		return "", err
