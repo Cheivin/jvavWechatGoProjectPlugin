@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 	"wechat-hub-plugin/hub"
+	"wechat-hub-plugin/plugins/exit_watch"
 	"wechat-hub-plugin/plugins/nga"
 	"wechat-hub-plugin/redirect"
 )
@@ -63,6 +64,7 @@ func init() {
 func initPlugins(service *Service) {
 	// service.AddPlugin(&plugins.SamePlugin{Model: "realisticVisionV13_v13"})
 	// service.AddPlugin(write.New())
+	service.AddPlugin(exit_watch.Plugin{})
 	service.AddPlugin(nga.New(os.DirFS(viper.GetString("PLUGIN_NGA_DIR"))))
 }
 
