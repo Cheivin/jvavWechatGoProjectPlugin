@@ -14,6 +14,11 @@ type PointInterface interface {
 	Pay(gid string, uid string, point int, command string) (int, error)
 }
 
+type DBInterface interface {
+	Query(sql string, args ...any) (map[string]any, error)
+	QueryAll(sql string, args ...any) ([]map[string]any, error)
+}
+
 // Plugin 插件接口
 type Plugin interface {
 	Handle(ctx *Context) error
@@ -23,6 +28,7 @@ type Context struct {
 	*Message
 	Sender SenderInterface
 	Point  PointInterface
+	DB     DBInterface
 	abort  bool
 }
 

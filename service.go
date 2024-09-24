@@ -12,6 +12,7 @@ type httpResult[T any] struct {
 }
 
 type Service struct {
+	db          hub.DBInterface
 	sender      hub.SenderInterface
 	pointManage hub.PointInterface
 	plugins     []hub.Plugin
@@ -28,12 +29,16 @@ func NewService(sender hub.SenderInterface, pointManage hub.PointInterface) *Ser
 func (s *Service) AddPlugin(plugin hub.Plugin) {
 	s.plugins = append(s.plugins, plugin)
 }
+func (s *Service) SetDB(db hub.DBInterface) {
+	s.db = db
+}
 
 func (s *Service) Handle(message *hub.Message) error {
 	slog.Info("receive message", "type", message.MsgType, "content", message.Content)
 	ctx := &hub.Context{
 		Message: message,
 		Sender:  s.sender,
+		DB:      s.db,
 		Point:   s.pointManage,
 	}
 	for _, plugin := range s.plugins {

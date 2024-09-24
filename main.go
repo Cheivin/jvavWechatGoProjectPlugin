@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/spf13/viper"
 	"log/slog"
 	"net/http"
@@ -14,7 +17,6 @@ import (
 	"time"
 	"wechat-hub-plugin/hub"
 	"wechat-hub-plugin/plugins/exit_watch"
-	"wechat-hub-plugin/plugins/nga"
 	"wechat-hub-plugin/redirect"
 )
 
@@ -65,7 +67,7 @@ func initPlugins(service *Service) {
 	// service.AddPlugin(&plugins.SamePlugin{Model: "realisticVisionV13_v13"})
 	// service.AddPlugin(write.New())
 	service.AddPlugin(exit_watch.Plugin{})
-	service.AddPlugin(nga.New(os.DirFS(viper.GetString("PLUGIN_NGA_DIR"))))
+	// service.AddPlugin(nga.New(os.DirFS(viper.GetString("PLUGIN_NGA_DIR"))))
 }
 
 func main() {
@@ -88,6 +90,8 @@ func main() {
 	pointManage := NewPointManage(viper.GetString("API_HOST_POINT"), username, password)
 
 	service := NewService(sender, pointManage)
+	service.SetDB(NewDB(connectDB()))
+
 	initPlugins(service)
 	client.OnMessage(func(bs []byte) error {
 		message := &hub.Message{}
@@ -115,4 +119,23 @@ func healthEndpoint() {
 	if err := http.ListenAndServe(":"+strconv.Itoa(port), mux); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("HealthEndpoint ListenAndServe", "err", err)
 	}
+}
+
+func connectDB() *sql.DB {
+	host := viper.GetString("DB_HOST")
+	port := viper.GetInt("DB_PORT")
+	username := viper.GetString("DB_USERNAME")
+	password := viper.GetString("DB_PASSWORD")
+	database := viper.GetString("DB_DATABASE")
+	parameter := viper.GetString("DB_PARAMETER")
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?%s", username, password, host, port, database, parameter)
+	// 打开数据库连接
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		panic(err)
+	}
+	db.SetMaxOpenConns(100)
+	db.SetMaxIdleConns(5)
+	slog.Info("Database connected")
+	return db
 }
